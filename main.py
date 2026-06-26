@@ -1,31 +1,33 @@
-import requests
-import time
-import os
-from environs import Env
+import asyncio
+import logging
 
-env = Env()  
-env.read_env() 
-                          
-bot_token = env('BOT_TOKEN')
-API_URL = 'https://api.telegram.org/bot'
-TEXT = 'Тестирую ботика'
-MAX_COUNTER = 100
+from aiogram import Bot, Dispatcher
+from config.config import Config, load_config
+from handlers import other, user
 
-offset = -2
-counter = 0
-chat_id: int
 
-while counter < MAX_COUNTER:
+# Функция конфигурирования и запуска бота
+async def main():
 
-    print('attempt =', counter)  #Чтобы видеть в консоли, что код живет
+    # Загружаем конфиг в переменную config
+    config: Config = load_config()
+    
+    # Задаём базовую конфигурацию логирования
+    logging.basicConfig(
+        level=config.log.level,
+        format=config.log.format,
+    )
+    # Инициализируем бот и диспетчер
+    bot = Bot(token=config.bot.token)
+    dp = Dispatcher()
 
-    updates = requests.get(f'{API_URL}{bot_token}/getUpdates?offset={offset + 1}').json()
+    # Регистриуем роутеры в диспетчере
+    dp.include_router(user.router)
+    dp.include_router(other.router)
 
-    if updates['result']:
-        for result in updates['result']:
-            offset = result['update_id']
-            chat_id = result['message']['from']['id']
-            requests.get(f'{API_URL}{bot_token}/sendMessage?chat_id={chat_id}&text={TEXT}')
+    # Пропускаем накопившиеся апдейты и запускаем polling
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
 
-    time.sleep(1)
-    counter += 1
+
+asyncio.run(main())
