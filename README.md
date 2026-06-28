@@ -6,6 +6,7 @@
 
 Структура проекта:
 
+```mermaid
 flowchart LR
     Project[french_transcription_bot] --> A[main.py<br>⬇<br>Точка входа]
     Project --> B[config/<br>⬇<br>Настройки]
@@ -31,6 +32,6 @@ flowchart LR
     class B,C,D,E folder
     class F,G,H main
     class C1,C2,E1 sub
-
+```
 
 Айди бота в тг: @french_transcription_bot
