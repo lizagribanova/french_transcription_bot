@@ -3,18 +3,17 @@ from aiogram.types import Message
 from lexicon.lexicon import LEXICON_RU
 from transcription.transcriber import transcribe
 
-# Инициализируем роутер уровня модуля
 router = Router()
 
-
-def should_handle_message(message: Message) -> bool:
+def is_text_message(message: Message) -> bool:
     return bool(message.text and not message.text.startswith('/'))
 
-
-@router.message(should_handle_message)
+@router.message(is_text_message)
 async def send_transcription(message: Message):
     try:
         transcription = transcribe(message.text)
         await message.reply(text=transcription)
-    except Exception:
+    except Exception as e:
+        # Логируем ошибку для отладки
+        print(f"Error in transcription: {e}")
         await message.reply(text=LEXICON_RU['no_words_to_transcribe'])

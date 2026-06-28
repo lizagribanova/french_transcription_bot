@@ -1,23 +1,87 @@
+import re
+
+# словарь с исключениями, которые не подчиняются общим правилам транскрипции
+EXCEPTIONS = {
+    # конечные согласные читаются
+    'sud': 'syd',
+    'ouest': 'wɛst',
+    'fils': 'fis',   
+    'bonus': 'bonys',
+    'bac': 'bak',
+    'sept': 'sɛt',  
+    
+    # исключения с окончанием -er
+    'hiver': 'ivɛʀ',
+    'mer': 'mɛʀ',
+    'cher': 'ʃɛʀ',
+    'hier': 'jɛʀ',
+    'ver': 'vɛʀ',
+    'fer': 'fɛʀ',
+    'cœur': 'kœʀ',
+    'sœur': 'sœʀ',
+    
+    # числительные с -x
+    'six': 'sis',
+    'dix': 'dis',
+    
+    # другие частые исключения
+    'monsieur': 'məsjø',
+    'madame': 'madam',
+    'mademoiselle': 'madmwazɛl'
+}
+
+def get_exception(word: str) -> str | None:
+    word_lower = word.lower()
+    return EXCEPTIONS.get(word_lower)
+
+# функция проверки, является ли текст французским
+def is_french_text(text: str) -> bool:
+    french_pattern = r'^[a-zA-Zàâäéèêëïîôöùûüÿçæœ\'\- ]+$'
+    
+    if not re.match(french_pattern, text):
+        return False
+    
+    french_letters = r'[a-zA-Zàâäéèêëïîôöùûüÿçæœ]'
+    if not re.search(french_letters, text):
+        return False
+    
+    consonant_cluster = r'[bcdfghjklmnpqrstvwxz]{5,}'
+    if re.search(consonant_cluster, text.lower()):
+        return False
+    
+    vowels = r'[aeiouyàâèéêëïîôùû]'
+    if not re.search(vowels, text.lower()):
+        return False
+    
+    return True
+    
 def transcribe(word: str) -> str:
-    word2tr = word.lower().split() #текст переводится в нижний регистр и делится на слова
+    if not is_french_text(word):
+        return "Извините, кажется, вы не прислали мне французских слов."
+    
+    exception_transcription = get_exception(word)
+    if exception_transcription:
+        return f"Транскрипция: {exception_transcription}"
+
+    word2tr = word.lower().split() # текст переводится в нижний регистр и делится на слова
     consonants = 'bcdfghjklmnpqrstvwxz'
     
-    result = ''
+    result = 'Транскрипция: '
 
     for j in range(len(word2tr)):
 
         i = 0
         was_cut = False
 
-        if word2tr[j][-1] in 'dpts':
-            #удаляются непроизносимые согласные на конце
+        if word2tr[j][-1] in 'xdpts':
+            # удаляются непроизносимые согласные на конце
             word2tr[j] = word2tr[j][:len(word2tr[j])-1]
             was_cut = True
 
         while i < len(word2tr[j]):
 
             if i < len(word2tr[j]) - 1 and word2tr[j][i] == word2tr[j][i+1] and word2tr[j][i] in consonants:
-                #проверка, есть ли двойные согласные, они читаются как простые
+                # проверка, есть ли двойные согласные, они читаются как простые
                 current_letter = word2tr[j][i]
                 if current_letter in gr2ph:
                     rule = codes[gr2ph[current_letter]['nicht']]
@@ -30,33 +94,33 @@ def transcribe(word: str) -> str:
             current_letter = word2tr[j][i]
 
             if current_letter in gr2ph:
-                #проверка на комбинацию букв
+                # проверка на комбинацию букв
                 combinations = sorted(gr2ph[current_letter].keys(), key=len, reverse=True)
                 rule = None
                 
                 for k in combinations:
                     
                     if k == 'nicht':
-                        #если комбинации нет, проверка на специальные правила
+                        # если комбинации нет, проверка на специальные правила
                         rule = special_rules(word2tr[j], i, was_cut)
                         continue
                     
                     if k == word2tr[j][i+1:i+1+len(k)]:
-                        #проверка на специальные правила для комбинаций
+                        # проверка на специальные правила для комбинаций
                         rule = combination_rules(current_letter, k, word2tr[j], i)
                         if rule is None:
                             rule = codes[ gr2ph[current_letter][k] ]
                             break
                 
                 if rule is not None:
-                    #если на предыдущих шагах было обнаружено подходящее правило, записываем в результат
+                    # если на предыдущих шагах было обнаружено подходящее правило, записываем в результат
                     if i == 0 and j != 0:
                         result += ' '
                     result += rule[0]
                     i += rule[1]
                 
                 else:
-                    #если специальное правило или комбинация не были найдены, то транскрибируем как одна буква -- один звук
+                    # если специальное правило или комбинация не были найдены, то транскрибируем как одна буква -- один звук
                     h = codes[gr2ph[current_letter]['nicht']]
                     if i == 0 and j != 0:
                         result += ' '
@@ -64,7 +128,7 @@ def transcribe(word: str) -> str:
                     i += 1
 
             else:
-                #если ничего не подошло, оставляем символ таким, какой есть
+                # если ничего не подошло, оставляем символ таким, какой есть
                 if i == 0 and j != 0:
                         result += ' '
                 result += word2tr[j][i]
@@ -76,7 +140,7 @@ def transcribe(word: str) -> str:
     return result
 
 def special_rules(word: str, pos: int, was_cut: bool) -> list[str, int] | None:
-    #функция, проверяющая специальные правила для одной буквы
+    # функция, проверяющая специальные правила для одной буквы
     current_pos = word[pos]
     vowels = 'aeiouyàâèéêëïîôùû'
     pronounced_consonants = 'bcdfghjklmnpqrstvwx'  # кроме z
@@ -113,7 +177,7 @@ def special_rules(word: str, pos: int, was_cut: bool) -> list[str, int] | None:
     return None
 
 def combination_rules(current_letter: str, combination: str, word: str, current_pos: int) -> list[str, int] | None:
-    #функция, проверяющая нестандартные правила комбинаций
+    # функция, проверяющая нестандартные правила комбинаций
     next_pos = current_pos + len(combination) + 1
     vowels = 'aeiouyàâèéêëïîôùû'
     pronounced_consonants = 'bcdfghjklmnpqrstvwx'
@@ -186,7 +250,7 @@ def combination_rules(current_letter: str, combination: str, word: str, current_
     return None
 
 gr2ph = {
-    #словарь с звуками и комбинациями, ссылается на словарь со списками, в котором содержится транскрипция и число, на которое необходимо сдвинуть счетчик
+    # словарь с звуками и комбинациями, ссылается на словарь со списками, в котором содержится транскрипция и число, на которое необходимо сдвинуть счетчик
     'a': {
          "nicht": 1,
          'n': 2,
@@ -299,6 +363,7 @@ gr2ph = {
     },
 
     'q': {
+        'nicht': 15,
         'u': 48
     },
 

@@ -13,6 +13,6 @@ async def process_start_command(message: Message):
 async def process_help_command(message: Message):
     await message.answer(text=LEXICON_RU['/help'])
 
-@router.message(Command(commands='contact'))
+@router.message(Command(commands='contacts'))
 async def process_contact_command(message: Message):
-    await message.answer(text=LEXICON_RU['/contact'])
+    await message.answer(text=LEXICON_RU['/contacts'])
